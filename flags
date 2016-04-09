@@ -1,0 +1,7 @@
+-ggdb
+-O0
+-pedantic
+-pedantic-errors
+-fstrict-aliasing
+-Wstrict-aliasing
+-std=gnu99
