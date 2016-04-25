@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 #include "bitty_benchmark.h"
 
 static uint64_t factorial_table[] = {
@@ -49,7 +48,7 @@ int main(int argc, char const *argv[])
   RESTART_BENCH_WITH_DESC(one, "test IO speed");
   // or
   // SET_BENCH_DESC(one, "test IO speed");
-  // RESTART_BENCH(one)
+  // RESTART_BENCH(one);
   sleep(1);
   STOP_BENCH_AND_PRINT_RESULTS_WITH_IO(one, 1025*1024);
   // or

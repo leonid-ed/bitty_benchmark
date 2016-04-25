@@ -9,31 +9,55 @@
 #include <time.h>
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h>
 
 #define USE_BENCH_STATE
-#define USE_COLOR_CODES
 
-#ifdef USE_COLOR_CODES
-  #define BB_CKNRM  "\x1B[0m"
-  #define BB_CKRED  "\x1B[31m"
-  #define BB_CKGRN  "\x1B[32m"
-  #define BB_CKYEL  "\x1B[33m"
-  #define BB_CKBLU  "\x1B[34m"
-  #define BB_CKMAG  "\x1B[35m"
-  #define BB_CKCYN  "\x1B[36m"
-  #define BB_CKWHT  "\x1B[37m"
-  #define BB_CRESET "\033[0m"
-#else
-  #define BB_CKNRM  ""
-  #define BB_CKRED  ""
-  #define BB_CKGRN  ""
-  #define BB_CKYEL  ""
-  #define BB_CKBLU  ""
-  #define BB_CKMAG  ""
-  #define BB_CKCYN  ""
-  #define BB_CKWHT  ""
-  #define BB_CRESET ""
-#endif // USE_COLOR_CODES
+/* dummies of the terminal color codes */
+static char *BB_CKNRM  = "";
+static char *BB_CKRED  = "";
+static char *BB_CKGRN  = "";
+static char *BB_CKYEL  = "";
+static char *BB_CKBLU  = "";
+static char *BB_CKMAG  = "";
+static char *BB_CKCYN  = "";
+static char *BB_CKWHT  = "";
+static char *BB_CRESET = "";
+
+/* we shoudn't put color codes if STDOUT is not a terminal */
+static int
+bb_should_colorize(void)
+{
+  return isatty(STDOUT_FILENO);
+}
+
+enum bb_opts {
+  BB_OPT_INITIALIZED_BIT = 0,
+  BB_OPT_INITIALIZED = (1 << BB_OPT_INITIALIZED_BIT),
+};
+
+static int _bb_opts = 0;
+#define BB_IS_INITIALIZED (_bb_opts & BB_OPT_INITIALIZED)
+
+static void
+bb_init(void)
+{
+  if (bb_should_colorize()) {
+    /* the real terminal color codes */
+    BB_CKNRM  = "\x1B[0m" ;
+    BB_CKRED  = "\x1B[31m";
+    BB_CKGRN  = "\x1B[32m";
+    BB_CKYEL  = "\x1B[33m";
+    BB_CKBLU  = "\x1B[34m";
+    BB_CKMAG  = "\x1B[35m";
+    BB_CKCYN  = "\x1B[36m";
+    BB_CKWHT  = "\x1B[37m";
+    BB_CRESET = "\033[0m" ;
+  }
+
+  _bb_opts |= BB_OPT_INITIALIZED;
+}
+
 
 /*
  *  Get the difference between finish value and start value in ms
@@ -103,6 +127,7 @@ struct bench_stat {
 
 #ifdef USE_BENCH_STATE
 #define NEW_BENCH(id, description)                                             \
+  if (!BB_IS_INITIALIZED) bb_init();                                           \
   struct bench_stat bench_ ## id = {                                           \
     .desc = description,                                                       \
     .elapsed_monotime_ms = 0,                                                  \
@@ -112,6 +137,7 @@ struct bench_stat {
   do {} while(0)
 #else
 #define NEW_BENCH(id, description)                                             \
+  if (!BB_IS_INITIALIZED) bb_init();                                           \
   struct bench_stat bench_ ## id = {                                           \
     .desc = description                                                        \
   };                                                                           \
@@ -199,10 +225,13 @@ struct bench_stat {
 
 #define PRINT_BENCH_RESULTS(id)                                                \
   do {                                                                         \
-    printf(BB_CKYEL "%12.2f %12.2f " BB_CKCYN "%25s   " BB_CRESET,             \
+    printf("%s%12.2f %12.2f%s " "%25s   %s",                                   \
+      BB_CKYEL,                                                                \
       GET_BENCH_ELAPSED_MONOTIME_MS(id),                                       \
       GET_BENCH_ELAPSED_PCPUTIME_MS(id),                                       \
-      QUOTE(id)                                                                \
+      BB_CKCYN,                                                                \
+      QUOTE(id),                                                               \
+      BB_CRESET                                                                \
     );                                                                         \
     if (bench_ ## id .desc) {                                                  \
       printf("# %s", bench_ ## id .desc);                                      \
@@ -212,12 +241,15 @@ struct bench_stat {
 
 #define PRINT_BENCH_RESULTS_WITH_IO_STAT(id, size)                             \
   do {                                                                         \
-    printf(BB_CKYEL "%12.2f %12.2f" BB_CKGRN "%10.4f MB/s "                    \
-           BB_CKCYN "%10s   " BB_CRESET,                                       \
+    printf("%s%12.2f %12.2f%s" "%10.4f MB/s %s" "%10s   %s",                   \
+      BB_CKYEL,                                                                \
       GET_BENCH_ELAPSED_MONOTIME_MS(id),                                       \
       GET_BENCH_ELAPSED_PCPUTIME_MS(id),                                       \
+      BB_CKGRN,                                                                \
       GET_BENCH_IO_SPEED_MB(id, size),                                         \
-      QUOTE(id)                                                                \
+      BB_CKCYN,                                                                \
+      QUOTE(id),                                                               \
+      BB_CRESET                                                                \
     );                                                                         \
     if (bench_ ## id .desc) {                                                  \
       printf("# %s", bench_ ## id .desc);                                      \
